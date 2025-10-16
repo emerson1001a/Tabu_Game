@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Jogo da Tabuada • v4.2</title>
+<title>Jogo da Tabuada • v5.1</title>
 <style>
 :root{
   --bg1:#7dd3fc; --bg2:#a7f3d0;
@@ -31,7 +31,7 @@ button:hover{transform:translateY(-1px)}button:active{transform:translateY(0)}
 #game{display:none}
 .board{display:flex;align-items:flex-end;justify-content:center;gap:8px;margin-top:8px}
 .num{font-size:64px;font-weight:900}.eq{font-size:36px;padding:0 6px 4px}
-.answerWrap{display:flex;flex-direction:column;align-items:center;margin-top:8px}
+.answerWrap{display:flex;flex-direction:column;align-items:center;margin-top:8px;position:relative}
 #answer{max-width:160px;text-align:center;font-size:28px;font-weight:800}
 #okBtn{width:160px;margin-top:8px}
 .feedback{text-align:center;margin-top:10px;font-weight:800;font-size:18px}
@@ -70,15 +70,34 @@ button:hover{transform:translateY(-1px)}button:active{transform:translateY(0)}
 
 <section class="card" id="setup">
 <div class="controls">
-  <div class="control"><label>Tabuada</label><select id="tabuada"><option value="todas">Todas</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div>
-  <div class="control"><label>Perguntas</label><select id="qty"><option>10</option><option selected>20</option><option>30</option></select></div>
+  <div class="control"><label>Tabuada</label>
+    <select id="tabuada">
+      <option value="todas">Todas</option>
+      <option>1</option><option>2</option><option>3</option>
+      <option>4</option><option>5</option><option>6</option>
+      <option>7</option><option>8</option><option>9</option><option>10</option>
+    </select>
+  </div>
+
+  <div class="control"><label>Perguntas</label>
+    <select id="qty">
+      <option>10</option><option selected>20</option><option>30</option>
+    </select>
+  </div>
+
+  <div class="control"><label>Modo</label>
+    <select id="mode">
+      <option value="memorizar" selected>Memorizar</option>
+      <option value="aprender">Aprender</option>
+    </select>
+  </div>
 </div>
 <div class="actions"><button id="startBtn">Começar</button><button id="resetBtn" class="secondary" disabled>Reiniciar</button></div>
 </section>
 
 <section class="card" id="game">
   <div class="board"><div class="num" id="a">3</div><div class="eq">×</div><div class="num" id="b">4</div></div>
-  <div class="answerWrap"><input id="answer" type="number" placeholder="?" /><button id="okBtn">OK</button></div>
+  <div class="answerWrap"><input id="answer" type="number" /><button id="okBtn">OK</button></div>
   <div class="feedback" id="feedback"></div>
   <div class="stats">
     <div class="stat"><h3>Questão</h3><p id="qIndex">0/0</p></div>
@@ -99,7 +118,7 @@ button:hover{transform:translateY(-1px)}button:active{transform:translateY(0)}
 const aEl=document.getElementById('a'),bEl=document.getElementById('b'),ansEl=document.getElementById('answer');
 const qIdxEl=document.getElementById('qIndex'),hitsEl=document.getElementById('hits'),pctEl=document.getElementById('pct'),avgEl=document.getElementById('avg'),fbEl=document.getElementById('feedback');
 const startBtn=document.getElementById('startBtn'),resetBtn=document.getElementById('resetBtn'),okBtn=document.getElementById('okBtn');
-const tabuadaEl=document.getElementById('tabuada'),qtyEl=document.getElementById('qty'),game=document.getElementById('game');
+const tabuadaEl=document.getElementById('tabuada'),qtyEl=document.getElementById('qty'),modeEl=document.getElementById('mode'),game=document.getElementById('game');
 const meter=document.getElementById('meter'),fill=document.getElementById('meterFill'),energy=document.getElementById('energy');
 
 const sndOK=new Audio("data:audio/wav;base64,UklGRpQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAAAgICAf39/f4CAgICAgICAf39/f4CAgICAf39/gICA");
@@ -120,20 +139,76 @@ function animateEnergy(){energy.style.transform='translateX(2px)';setTimeout(()=
 
 function updateMeter(p){const w=pctToWidth(p);fill.style.width=w+'%';const lvl=levelFromPct(p);if(lvl>prevLevel){meter.classList.add('glow');setTimeout(()=>meter.classList.remove('glow'),600);}prevLevel=lvl;}
 
-function show(){if(idx>=questions.length){finish();return;}const q=questions[idx];aEl.textContent=q.a;bEl.textContent=q.b;q.tStart=performance.now();qIdxEl.textContent=`${idx+1}/${questions.length}`;ansEl.value='';ansEl.focus();fbEl.textContent='';}
+function show(){
+  if(idx>=questions.length){finish();return;}
+  const q=questions[idx];
+  aEl.textContent=q.a;
+  bEl.textContent=q.b;
+  q.tStart=performance.now();
+  qIdxEl.textContent=`${idx+1}/${questions.length}`;
+  ansEl.value='';
+  ansEl.focus();
+  fbEl.textContent='';
+
+  // 👇 Modo Aprender: mostra o resultado em ghost (2 segundos)
+  if(modeEl.value==='aprender'){
+    ansEl.placeholder=''; // remove o ponto de interrogação
+    const ghost=document.createElement('div');
+    ghost.textContent=q.a*q.b;
+    ghost.style.position='absolute';
+    ghost.style.fontSize='32px';
+    ghost.style.fontWeight='800';
+    ghost.style.color='rgba(0,0,0,0.25)';
+    ghost.style.pointerEvents='none';
+    ghost.style.top='8px';
+    ghost.style.left='0';
+    ghost.style.right='0';
+    ghost.style.textAlign='center';
+    ansEl.parentNode.appendChild(ghost);
+    setTimeout(()=>ghost.remove(),2000);
+  } else {
+    ansEl.placeholder='?';
+  }
+}
 
 function stats(){const ans=Math.min(idx,questions.length);const pct=ans?Math.round((hits/ans)*100):0;const avg=ans?(totalMs/ans)/1000:0;hitsEl.textContent=hits;pctEl.textContent=pct+'%';avgEl.textContent=avg.toFixed(1)+'s';updateEnergy(pct);return{pct,avg};}
 
 function classify(pct){if(pct<60)return{tier:'Explorador',msg:'Continue treinando, você está aprendendo!'};if(pct<75)return{tier:'Ninja',msg:'Você é rápido como um Ninja!'};if(pct<90)return{tier:'Mestre',msg:'Impressionante, você é um Mestre!'};return{tier:'Lenda',msg:'Incrível! Você é uma Lenda!'};}
 
-function submit(){if(idx>=questions.length)return;const q=questions[idx];q.tEnd=performance.now();totalMs+=(q.tEnd-q.tStart);const val=Number(ansEl.value.trim());const beforePct=Math.round((hits/Math.max(idx,1))*100);
-if(val===q.a*q.b){hits++;fbEl.textContent=`Correto! ${q.a}×${q.b}=${val}`;fbEl.className='feedback good';sndOK.play();sndBIP.play();}else{fbEl.textContent=`Ops… ${q.a}×${q.b}=${q.a*q.b}`;fbEl.className='feedback bad';sndERR.play();sndBOP.play();}
-idx++;const{pct}=stats();updateMeter(pct);setTimeout(show,600);}
+function submit(){if(idx>=questions.length)return;const q=questions[idx];q.tEnd=performance.now();totalMs+=(q.tEnd-q.tStart);const val=Number(ansEl.value.trim());
+  if(val===q.a*q.b){hits++;fbEl.textContent=`Correto! ${q.a}×${q.b}=${val}`;fbEl.className='feedback good';sndOK.play();sndBIP.play();}
+  else{fbEl.textContent=`Ops… ${q.a}×${q.b}=${q.a*q.b}`;fbEl.className='feedback bad';sndERR.play();sndBOP.play();}
+  idx++;const{pct}=stats();updateMeter(pct);setTimeout(show,600);
+}
 
-function start(){cfg.base=tabuadaEl.value;cfg.qty=parseInt(qtyEl.value,10);idx=0;totalMs=0;hits=0;prevLevel=0;build();game.style.display='block';resetBtn.disabled=false;startBtn.disabled=true;fill.style.width='0%';energy.style.width='0%';show();}
+function start(){
+  cfg.base=tabuadaEl.value;
+  cfg.qty=parseInt(qtyEl.value,10);
+  idx=0;totalMs=0;hits=0;prevLevel=0;
+  build();
+  game.style.display='block';
+  resetBtn.disabled=false;
+  startBtn.disabled=true;
+  fill.style.width='0%';
+  energy.style.width='0%';
+  show();
+}
 
-function finish(){const{pct,avg}=stats();const{tier,msg}=classify(pct);const panel=document.createElement('div');panel.id='finalPanel';panel.innerHTML=`<div class='final-box'><h2>🏆 ${tier}</h2><p>${msg}</p><p>Acertos: ${pct}%<br>Tempo médio: ${avg.toFixed(1)}s</p><button id='nextBtn'>Próximo Game</button></div>`;document.body.appendChild(panel);sndWIN.play();document.getElementById('nextBtn').onclick=()=>{panel.remove();start();};}
+function finish(){
+  const{pct,avg}=stats();
+  const{tier,msg}=classify(pct);
+  const panel=document.createElement('div');
+  panel.id='finalPanel';
+  panel.innerHTML=`<div class='final-box'><h2>🏆 ${tier}</h2><p>${msg}</p><p>Acertos: ${pct}%<br>Tempo médio: ${avg.toFixed(1)}s</p><button id='nextBtn'>Próximo Game</button></div>`;
+  document.body.appendChild(panel);
+  sndWIN.play();
+  document.getElementById('nextBtn').onclick=()=>{panel.remove();start();};
+}
 
-startBtn.onclick=start;resetBtn.onclick=()=>{game.style.display='none';startBtn.disabled=false;resetBtn.disabled=true;fill.style.width='0%';energy.style.width='0%';};okBtn.onclick=submit;ansEl.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+startBtn.onclick=start;
+resetBtn.onclick=()=>{game.style.display='none';startBtn.disabled=false;resetBtn.disabled=true;fill.style.width='0%';energy.style.width='0%';};
+okBtn.onclick=submit;
+ansEl.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
 </script>
-</body></html>
+</body>
+</html>
